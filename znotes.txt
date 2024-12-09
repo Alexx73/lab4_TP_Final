@@ -1,0 +1,70 @@
+Create a Virtual Environment
+python -m venv .venv
+
+Activate the Virtual Environment cmd
+.venv/Scripts/activate.bat
+
+powershell
+.venv\Scripts\Activate.ps1
+
+Deactivate the Virtual Environment
+deactivate
+
+INSTALAR DEPENCIAS
+pip install -r requirements.txt
+
+PROYECTO
+pip install fastapi uvicorn sqlalchemy psycopg2 alembic
+
+CORRER PROYECTO
+uvicorn --host localhost --port 5555 main:app  
+
+
+
+
+
+------
+
+  try:
+          # Asegúrate de que el formato de la hora es correcto
+        print(f"Datos de entrada: {reserva.dict()}")
+
+        hora_inicio = datetime.strptime(reserva.hora, "%H:%M")
+        print(f'hora inicio: {hora_inicio}')
+        # Convertir la duración a un valor concreto para timedelta
+        duracion = int(reserva.duracion)
+
+        # Validar que los datos están correctos
+        # hora_inicio = datetime.strptime(reserva.hora, "%H:%M:%S")
+       
+        # hora_fin = hora_inicio + timedelta(minutes=duracion)
+        # print(f'hora inicio{hora_inicio}')
+
+        # Validar si hay solapamiento de reservas
+        # reservas_existentes = db.query(Reserva).filter(
+        # Reserva.cancha_id == reserva.cancha_id,
+        # Reserva.dia == reserva.dia,
+        # func.time(Reserva.hora) < hora_fin.time(),  # Hora fin no debe estar antes del inicio
+        # func.time(
+        #     func.add_time(Reserva.hora, text(f"INTERVAL '{Reserva.duracion} minutes'"))
+        # ) > hora_inicio.time()).first() # Hora inicio no debe estar después del fin
+
+        # if reservas_existentes:
+        #     raise HTTPException(
+        #         status_code=400, detail="La reserva se solapa con una existente."
+        #     )
+
+        # Crear la reserva
+        # nueva_reserva = Reserva(
+        #     dia=reserva.dia,
+        #     hora=hora_inicio.time(),
+        #     duracion=duracion,
+        #     telefono=reserva.telefono,
+        #     nombre_contacto=reserva.nombre_contacto,
+        #     cancha_id=reserva.cancha_id,
+        # )
+        # db.add(nueva_reserva)
+        # db.commit()
+        # db.refresh(nueva_reserva)
+        # return nueva_reserva
+        return {"message": "Reserva validada correctamente", "datos": reserva.dict()}

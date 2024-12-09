@@ -1,0 +1,63 @@
+
+CREATE TABLE reservas (
+    id SERIAL PRIMARY KEY,             -- Identificador único
+    dia DATE NOT NULL,                 -- Día de la reserva
+    hora TIME NOT NULL,                -- Hora de inicio de la reserva
+    duracion INTEGER NOT NULL,         -- Duración de la reserva (en horas)
+    hora_fin TIME NOT NULL,            -- Hora de finalización de la reserva
+    telefono VARCHAR(15) NOT NULL,     -- Teléfono del contacto
+    nombre_contacto VARCHAR(100) NOT NULL,  -- Nombre del contacto
+    cancha_id INTEGER NOT NULL         -- Identificador de la cancha
+);
+
+
+
+
+
+CREATE TABLE canchas (
+    id SERIAL PRIMARY KEY,       -- Identificador único de la cancha
+    nombre VARCHAR(50) NOT NULL, -- Nombre de la cancha (e.g., "Cancha 1")
+    techada BOOLEAN NOT NULL     -- Indica si la cancha es techada o no
+);
+
+
+INSERT INTO canchas (nombre, techada) VALUES
+('Cancha 1', TRUE),
+('Cancha 2', FALSE),
+('Cancha 3', TRUE);
+
+
+INSERT INTO reservas (dia, hora, duracion, telefono, nombre_contacto, cancha_id)
+VALUES
+('2024-12-01', '09:00:00', 120, '123456789', 'Carlos López', 1), -- Cancha 1, 2 horas
+('2024-12-03', '14:00:00', 90, '987654321', 'Ana Pérez', 2),    -- Cancha 2, 1.5 horas
+('2024-12-05', '16:00:00', 60, '456123789', 'Luis Gómez', 3),   -- Cancha 3, 1 hora
+('2024-12-10', '10:00:00', 180, '789123456', 'María Torres', 1),-- Cancha 1, 3 horas
+('2024-12-15', '12:00:00', 120, '321654987', 'Jorge Ramírez', 2);-- Cancha 2, 2 horas
+
+
+--------------
+{
+  "dia": "20-12-2024",
+  "hora": "14:00:00",
+  "duracion":1,
+  "telefono": "123456789",
+  "nombre_contacto": "Juan Pérez",
+  "cancha_id":1
+}
+
+
+
+---------------------
+
+
+CREATE TABLE reservas-old (
+    id SERIAL PRIMARY KEY,       -- Identificador único de la reserva
+    dia DATE NOT NULL,           -- Fecha de la reserva (día)
+    hora TIME NOT NULL,          -- Hora de inicio de la reserva
+    duracion INT NOT NULL,       -- Duración en minutos
+    telefono VARCHAR(15) NOT NULL,  -- Teléfono de contacto
+    nombre_contacto VARCHAR(100) NOT NULL, -- Nombre del contacto
+    cancha_id INT NOT NULL,      -- Relación con la tabla canchas
+    CONSTRAINT fk_cancha FOREIGN KEY (cancha_id) REFERENCES canchas(id)
+);
