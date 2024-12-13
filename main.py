@@ -8,8 +8,7 @@ from schemas import CanchaCreate, CanchaUpdate, ReservaCreate,ReservaResponse
 from sqlalchemy import and_, or_, func, text
 import locale
 from sqlalchemy import cast, Time
-
-
+from fastapi.middleware.cors import CORSMiddleware
 
 # Establecer el idioma a español
 try:
@@ -19,6 +18,24 @@ except locale.Error:
 
 # Crear la aplicación FastAPI
 app = FastAPI()
+
+# Lista de orígenes permitidos
+origins = [
+    "http://localhost:5173",  # Cambia esto al puerto donde está corriendo tu frontend
+    # Puedes agregar más orígenes si es necesario
+]
+
+# Añadir el middleware de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Permitir solo los orígenes especificados
+    allow_credentials=True,
+    allow_methods=["*"],  # Permitir todos los métodos HTTP
+    allow_headers=["*"],  # Permitir todos los encabezados
+)
+
+
+
 
 # Endpoint para obtener todas las reservas
 @app.get("/reservas")
@@ -176,6 +193,11 @@ async def get_canchas(db: Session = Depends(get_db)):
 @app.post("/canchas/", response_model=CanchaCreate)
 def create_cancha(cancha: CanchaCreate, db: Session = Depends(get_db)):
     db_cancha = Cancha(nombre=cancha.nombre, techada=cancha.techada)
+
+      # Verificar si el nombre ya existe
+    existing_cancha = db.query(Cancha).filter(Cancha.nombre == cancha.nombre).first()
+    if existing_cancha:
+        raise HTTPException(status_code=400, detail="El nombre de la cancha ya está en uso.")
     db.add(db_cancha)
     db.commit()
     db.refresh(db_cancha)
