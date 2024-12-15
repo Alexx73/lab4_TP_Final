@@ -38,12 +38,12 @@ VALUES
 
 --------------
 {
-  "dia": "20-12-2024",
+  "dia": "2024-12-30",
   "hora": "14:00:00",
   "duracion":1,
   "telefono": "123456789",
   "nombre_contacto": "Juan Pérez",
-  "cancha_id":1
+  "cancha_id":4
 }
 
 

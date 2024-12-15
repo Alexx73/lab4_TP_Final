@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
+from sqlalchemy.orm import Session
 
 from db import Session, get_db
 from modelos import Cancha, Reserva
@@ -68,117 +69,85 @@ async def del_reservas(reserva_id: int, db: Session = Depends(get_db)):
 @app.post("/reservas", response_model=ReservaResponse)
 def create_reserva(reserva: ReservaCreate, db: Session = Depends(get_db)):
     try:
-        print(f"Datos recibidos: {reserva.dict()}")
+        print(f"Datos recibidos: {reserva}")
 
-         # Convertir la fecha "dia" con el formato DD-MM-YYYY
-        dia = datetime.strptime(reserva.dia, "%d-%m-%Y")
+        # Definir horarios de apertura y cierre
+        hora_apertura = time(14, 0)
+        hora_cierre = time(22, 0)
 
-         # Obtener el nombre del día de la semana en español
-        dia_semana = dia.strftime("%A").capitalize()  # Capitaliza para empezar con mayúscula
-        duracion = timedelta(minutes=reserva.duracion)
-        duracion_minutos = int(duracion.total_seconds() - 1)  # Conversión a minutos
-        
-        print(f'Día procesado: {dia.strftime("%d-%m-%Y")}, Dia: {dia_semana}, duracion { duracion_minutos} ')
+        # Procesar fecha
+        dia = datetime.strptime(reserva.dia, "%Y-%m-%d").date()
 
-         # Calcular hora_fin
+        # Procesar hora_inicio con tolerancia para formatos "%H:%M" y "%H:%M:%S"
         try:
-            # Intentar parsear con formato "HH:MM:SS"
-            hora_inicio = datetime.strptime(reserva.hora, "%H:%M:%S").time()
+            if ":" in reserva.hora:
+                hora_inicio = datetime.strptime(reserva.hora, "%H:%M:%S").time()  # Intentar con segundos
+            else:
+                hora_inicio = datetime.strptime(reserva.hora, "%H:%M").time()  # Intentar sin segundos
         except ValueError:
-         # Si falla, intentar con formato "HH:MM"
-            try:
-                hora_inicio = datetime.strptime(reserva.hora, "%H:%M").time()
-            except ValueError:
-                raise HTTPException(
-            status_code=400, detail="Formato de hora inválido. Debe ser 'HH:MM' o 'HH:MM:SS'."
-        )
-        # hora_inicio = datetime.strptime(reserva.hora, "%H:%M").time()
-        duracion_minutos = (reserva.duracion * 60) - 1  # Convertir horas a minutos y restar 1
-        hora_fin = (datetime.combine(dia, hora_inicio) + timedelta(minutes=duracion_minutos)).time()
-       
-
-        # Normalizar y validar formato de hora
-        hora_str = reserva.hora.strip()
-        try:
-            # Intentar parsear con formato "HH:MM:SS"
-            hora_inicio = datetime.strptime(hora_str, "%H:%M:%S")
-        except ValueError:
-            # Si falla, intentar con formato "HH:MM"
-            try:
-                hora_inicio = datetime.strptime(hora_str, "%H:%M")
-            except ValueError:
-                raise ValueError("Formato de hora inválido. Debe ser 'HH:MM' o 'HH:MM:SS'.")
-            
-        hora_fin_reserva = hora_inicio + timedelta(minutes=duracion_minutos)
-        # hora_fin = hora_inicio + timedelta(hora_inicio + reserva.duracion - 1)
-
-        print(f"Hora Inicio: {hora_inicio.strftime('%H:%M')} hora fin Reserva: {hora_fin_reserva.strftime('%H:%M')} , duracion { duracion_minutos}")
-
-        #####
-
-       # Validar si hay solapamiento de reservas
-        reservas_existentes = db.query(Reserva).filter(
-        Reserva.cancha_id == reserva.cancha_id,
-        Reserva.dia == dia,
-        or_(
-            and_(
-                Reserva.hora <= cast(hora_inicio, Time),  # Convertir hora_inicio a Time
-                Reserva.hora_fin > cast(hora_inicio, Time)
-            ),
-            and_(
-                Reserva.hora < cast(hora_fin, Time),  # Convertir hora_fin a Time
-                Reserva.hora_fin >= cast(hora_fin, Time)
-            ),
-            and_(
-                Reserva.hora >= cast(hora_inicio, Time),
-                Reserva.hora_fin <= cast(hora_fin, Time)
+            raise HTTPException(
+                status_code=400,
+                detail="Formato de hora inválido. Debe ser 'HH:MM' o 'HH:MM:SS'."
             )
-        )
-    ).first()
+
+        # Calcular la hora de fin
+        duracion_minutos = reserva.duracion * 60  # Convertir duración a minutos
+        hora_fin = (datetime.combine(datetime.today(), hora_inicio) + timedelta(minutes=duracion_minutos)).time()
+
+        print(f"Fecha procesada: {dia}, Hora inicio: {hora_inicio}, Hora fin: {hora_fin}")
+
+        # Validar rango horario
+        if not (hora_apertura <= hora_inicio <= hora_cierre):
+            raise HTTPException(
+                status_code=400,
+                detail=f"La hora de inicio debe estar entre {hora_apertura} y {hora_cierre}."
+            )
+        if not (hora_apertura <= hora_fin <= hora_cierre):
+            raise HTTPException(
+                status_code=400,
+                detail=f"La hora de fin debe estar entre {hora_apertura} y {hora_cierre}."
+            )
+
+        # Validar solapamiento de reservas
+        reservas_existentes = db.query(Reserva).filter(
+            Reserva.cancha_id == reserva.cancha_id,
+            Reserva.dia == dia,
+            or_(
+                and_(Reserva.hora <= hora_inicio, Reserva.hora_fin > hora_inicio),
+                and_(Reserva.hora < hora_fin, Reserva.hora_fin >= hora_fin),
+                and_(Reserva.hora >= hora_inicio, Reserva.hora_fin <= hora_fin)
+            )
+        ).first()
 
         if reservas_existentes:
             raise HTTPException(
-                status_code=400, detail="La reserva se solapa con una existente."
+                status_code=400,
+                detail="La reserva se solapa con una existente."
             )
-        
-          #####
-        
-        # # Crear la nueva reserva
+
+        # Crear la reserva
         nueva_reserva = Reserva(
             dia=dia,
             hora=hora_inicio,
             duracion=reserva.duracion,
-            hora_fin=hora_fin,  # Almacenar hora_fin en la base de datos
+            hora_fin=hora_fin,
             telefono=reserva.telefono,
             nombre_contacto=reserva.nombre_contacto,
             cancha_id=reserva.cancha_id,
         )
-
         db.add(nueva_reserva)
         db.commit()
         db.refresh(nueva_reserva)
-        return nueva_reserva
 
-  
-        # Ejemplo de retorno temporal
-        # return {
-        #     "message": "Reserva creada exitosamente",
-        #     "dia_semana": dia_semana,  # Día de la semana (e.g., Monday, Tuesday)
-        #     "dia": reserva.dia,
-        #     # "hora": str(hora_inicio.time()),
-        #      "hora_inicio": hora_inicio.strftime("%H:%M"),  # Formato solo horas y minutos
-        #      "hora_fin": nueva_reserva.hora_fin.strftime("%H:%M"),
-        #     "duracion": reserva.duracion,
-        #     "telefono": reserva.telefono,
-        #     "nombre_contacto": reserva.nombre_contacto,
-        #     "cancha_id": reserva.cancha_id,
-        # }
+        return nueva_reserva
 
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
-        print(f"Error en la creación de la reserva: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error en la creación de la reserva: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+
 
 
 
@@ -186,7 +155,7 @@ def create_reserva(reserva: ReservaCreate, db: Session = Depends(get_db)):
 # **********  Endpoint Canchas  **********
 @app.get("/canchas")
 async def get_canchas(db: Session = Depends(get_db)):
-    canchas = db.query(Cancha).all()
+    canchas = db.query(Cancha).order_by(Cancha.nombre.asc()).all()
     return canchas
 
 
