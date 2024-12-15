@@ -48,6 +48,28 @@ VALUES
 
 
 
+9
+{
+  "dia": "2024-12-20",
+  "hora": "17:00:00",
+  "duracion":1,
+  "telefono": "9999999",
+  "nombre_contacto": "Paula Lopez",
+  "cancha_id":4
+}
+
+{
+  "dia": "2024-12-20",
+  "hora": "20:00:00",
+  "duracion":1,
+  "telefono": "9999999",
+  "nombre_contacto": "Paula Lopez",
+  "cancha_id":4
+}
+
+
+
+
 ---------------------
 
 
