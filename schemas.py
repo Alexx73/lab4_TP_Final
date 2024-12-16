@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, validator
 from datetime import date, time, datetime
 from typing import Optional
 
@@ -39,29 +39,37 @@ class ReservaResponse(BaseModel):
 
 class ReservaUpdate(BaseModel):
     dia: str
-    hora: str
+    hora: str  # Este campo se convertirá automáticamente a `time`
     duracion: int
-    telefono: Optional[str]
-    nombre_contacto: Optional[str]  
+    telefono: str
+    nombre_contacto: str
     cancha_id: int
 
-    # Validador para el campo 'dia'
-    @field_validator("dia")
-    def validate_dia(cls, value):
-        try:
-            datetime.strptime(value, "%Y-%m-%d")
-        except ValueError:
-            raise ValueError("El formato de la fecha debe ser 'YYYY-MM-DD'.")
-        return value
+    # @field_validator("hora", mode="before")
+    # def validar_hora(cls, value):
+    #     """
+    #     Valida y convierte el campo 'hora' a un objeto `time`, admitiendo formatos `HH:MM` y `HH:MM:SS`.
+    #     """
+    #     if isinstance(value, time):
+    #         return value  # Si ya es un objeto `time`, no hacer nada
+    #     if isinstance(value, str):
+    #         try:
+    #             if len(value.split(":")) == 2:  # Formato `HH:MM`
+    #                 value += ":00"  # Agregar segundos
+    #             return datetime.strptime(value, "%H:%M:%S").time()  # Convertir a objeto `time`
+    #         except ValueError:
+    #             raise ValueError("El formato de hora debe ser 'HH:MM' o 'HH:MM:SS'.")
+    #     raise ValueError("El campo 'hora' debe ser un string o un objeto `time`.")
 
-    # Validador para el campo 'hora'
-    @field_validator("hora")
-    def validate_hora(cls, value):
-        try:
-            datetime.strptime(value, "%H:%M")
-        except ValueError:
-            raise ValueError("El formato de la hora debe ser 'HH:MM'.")
-        return value
+    # @field_validator("dia", mode="before")
+    # def validar_dia(cls, value):
+    #     """
+    #     Valida que el día esté en formato correcto 'YYYY-MM-DD'.
+    #     """
+    #     try:
+    #         return datetime.strptime(value, "%Y-%m-%d").date()
+    #     except ValueError:
+    #         raise ValueError("El formato de la fecha debe ser 'YYYY-MM-DD'.")
 
 class CanchaResponse(BaseModel):
     id: int

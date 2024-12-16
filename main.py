@@ -131,19 +131,24 @@ async def mod_reservas(
 
     # Procesar hora_inicio con tolerancia a formatos "%H:%M" y "%H:%M:%S"
     try:
-        if ":" in reserva.hora:
-            hora_inicio = datetime.strptime(reserva.hora, "%H:%M:%S").time()  # Intentar con segundos
+        if len(reserva.hora.split(":")) == 2:  # Formato "HH:MM"
+            hora_inicio = datetime.strptime(reserva.hora + ":00", "%H:%M:%S").time()  # Agregar segundos
+        elif len(reserva.hora.split(":")) == 3:  # Formato "HH:MM:SS"
+            hora_inicio = datetime.strptime(reserva.hora, "%H:%M:%S").time()
         else:
-            hora_inicio = datetime.strptime(reserva.hora, "%H:%M").time()  # Intentar sin segundos
+            raise ValueError
     except ValueError:
         raise HTTPException(
             status_code=400,
             detail="Formato de hora inválido. Debe ser 'HH:MM' o 'HH:MM:SS'."
         )
 
+    print(f"Hora de inicio procesada correctamente: {hora_inicio}")
+
     # Calcular hora_fin
     duracion_minutos = reserva.duracion * 60
     hora_fin = (datetime.combine(datetime.today(), hora_inicio) + timedelta(minutes=duracion_minutos)).time()
+    print(f"Hora fin calculada correctamente: {hora_fin}")
 
     # Validar rango horario
     if not (hora_apertura <= hora_inicio <= hora_cierre):
@@ -156,6 +161,7 @@ async def mod_reservas(
             status_code=400,
             detail=f"La hora de fin debe estar entre {hora_apertura.strftime('%H:%M')} y {hora_cierre.strftime('%H:%M')}."
         )
+    print("Rango horario validado correctamente.")
 
     # Validar solapamiento de reservas
     reservas_existentes = db.query(Reserva).filter(
@@ -174,6 +180,7 @@ async def mod_reservas(
             status_code=400,
             detail="La reserva se solapa con una existente."
         )
+    print("Validación de solapamiento superada.")
 
     # Actualizar la reserva existente
     db_reserva.nombre_contacto = reserva.nombre_contacto
@@ -187,6 +194,7 @@ async def mod_reservas(
     db.commit()
     db.refresh(db_reserva)
 
+    print(f"Reserva actualizada: {db_reserva}")
     return db_reserva
 
 

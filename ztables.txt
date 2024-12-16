@@ -60,10 +60,10 @@ VALUES
 
 {
   "dia": "2024-12-20",
-  "hora": "20:00:00",
+  "hora": "19:00:00",
   "duracion":1,
   "telefono": "9999999",
-  "nombre_contacto": "Paula Lopez",
+  "nombre_contacto": "Paula Lopez2333",
   "cancha_id":4
 }
 
