@@ -37,6 +37,9 @@ class ReservaResponse(BaseModel):
     nombre_contacto: str
     cancha_id: int
 
+    class Config:
+        orm_mode = True  # Habilitar conversión desde objetos SQLAlchemy
+
 class ReservaUpdate(BaseModel):
     dia: str
     hora: str  # Este campo se convertirá automáticamente a `time`

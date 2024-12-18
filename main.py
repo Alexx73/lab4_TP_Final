@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException
 from datetime import datetime, timedelta, time
 from sqlalchemy.orm import Session
+from typing import List, Optional, Union, Dict
+
 
 from db import Session, get_db
 from modelos import Cancha, Reserva
@@ -44,39 +46,63 @@ async def get_reservas(db: Session = Depends(get_db)):
     reservas = db.query(Reserva).all()
     return reservas
 
+
+
 # Endpoint para obtener todas las reservas filtradas por día y cancha
-@app.get("/reservas-por-dia")
-async def get_reservas(dia: str, cancha_id: int = 0, db: Session = Depends(get_db)):
+@app.get("/reservas-por-dia/", response_model=Dict[str, Union[str, List[ReservaResponse]]])
+async def get_reservas(
+    dia: str,
+    cancha_id: int = 0,
+    db: Session = Depends(get_db)
+):
     try:
-        # Convertir el parámetro dia a un objeto datetime
-        fecha = datetime.strptime(dia, "%Y-%m-%d").date()
+        print(f"Parámetro recibido - dia: {dia}, cancha_id: {cancha_id}")
 
-        if not dia:
-            raise HTTPException(status_code=400, detail="Debe Ingresar una fecha valida, con este formato 'YYYY-MM-DD'.")
+        # Validar el formato de la fecha
+        try:
+            fecha = datetime.strptime(dia, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de fecha inválido. Debe ser 'YYYY-MM-DD'.")
 
-        # Construir la consulta
+        # Validar cancha_id
+        if not isinstance(cancha_id, int):
+            print(f"Valor inválido para cancha_id ({cancha_id}), se asignará 0 por defecto.")
+            cancha_id = 0
+
+        # Verificar si la cancha existe
         if cancha_id > 0:
-            # Filtrar por fecha y por ID de cancha
+            cancha_existente = db.query(Cancha).filter(Cancha.id == cancha_id).first()
+            if not cancha_existente:
+                raise HTTPException(status_code=404, detail=f"No existe una cancha con el ID {cancha_id}.")
+
+        # Consultar las reservas
+        if cancha_id > 0:  # Reservas para una cancha específica
             reservas = db.query(Reserva).filter(
                 and_(
                     Reserva.dia == fecha,
                     Reserva.cancha_id == cancha_id
                 )
             ).all()
-        else:
-            # Filtrar solo por fecha (todas las canchas)
+        else:  # Reservas para todas las canchas
             reservas = db.query(Reserva).filter(Reserva.dia == fecha).all()
 
-            # Validar si no hay reservas
-        if not reservas:
-            return {"message": f"No hay reservas para el día {fecha}."}
+        # Formatear la respuesta
+        if reservas:
+            return {
+                "message": "Reservas encontradas.",
+                "reservas": reservas
+            }
+        else:
+            return {
+                "message": f"No hay reservas para la cancha {cancha_id} en el día {fecha}.",
+                "reservas": []
+            }
 
-        return reservas
-
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Debe ser 'YYYY-MM-DD'.")
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
 
 
 @app.delete("/reservas/{reserva_id}")
