@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Union, Dict
 
 
-from db import Session, get_db
-from modelos import Cancha, Reserva
+from db import Session, get_db, Base, engine
+from modelos import Cancha, Reserva, Usuario
 from schemas import CanchaCreate, CanchaUpdate, ReservaCreate,ReservaResponse, CanchaResponse, ReservaUpdate
 # from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, text
@@ -37,6 +37,8 @@ app.add_middleware(
     allow_headers=["*"],  # Permitir todos los encabezados
 )
 
+# Crear las tablas automáticamente si no existen
+Base.metadata.create_all(bind=engine)
 
 
 
@@ -359,17 +361,32 @@ def update_cancha(cancha_id: int, cancha: CanchaUpdate, db: Session = Depends(ge
     return db_cancha
 
 
+from fastapi import HTTPException
+
 @app.delete("/canchas/{cancha_id}", response_model=dict)
 def delete_cancha(cancha_id: int, db: Session = Depends(get_db)):
     # Buscar la cancha por id
     db_cancha = db.query(Cancha).filter(Cancha.id == cancha_id).first()
     if not db_cancha:
-        raise HTTPException(status_code=404, detail="Cancha no encontrada")
-    
+        raise HTTPException(
+            status_code=404,
+            detail=f"Cancha con ID {cancha_id} no encontrada."
+        )
+
+    # Verificar que no tenga reservas
+    reservas_asociadas = db.query(Reserva).filter(Reserva.cancha_id == cancha_id).first()
+    if reservas_asociadas:
+        raise HTTPException(
+            status_code=409,
+            detail=f"La cancha con ID {cancha_id} no puede ser eliminada porque tiene reservas asociadas.\nDebe borrar las reservas primero"
+        )
+
     # Eliminar la cancha
     db.delete(db_cancha)
-    db.commit()    
-    return {"message": f"La cancha con id {cancha_id} fue eliminada exitosamente"}
+    db.commit()
+
+    return { "message": f"La cancha con ID {cancha_id} fue eliminada exitosamente." }
+
 
 
 

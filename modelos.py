@@ -39,3 +39,13 @@ def hora_fin(self):
             hora_fin = (datetime.combine(datetime.min, self.hora) + timedelta(minutes=duracion_minutos)).time()
             return hora_fin
         return None
+
+# Modelo SQLAlchemy para una Cancha
+class Usuario(Base):
+    __tablename__ = 'usuarios'
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(20), nullable=False)
+    telefono = Column(String(15), nullable=False)
+    email = Column(String(30), nullable=False)
+
+
