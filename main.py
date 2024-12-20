@@ -335,7 +335,7 @@ def create_cancha(cancha: CanchaCreate, db: Session = Depends(get_db)):
     # Verificar si el nombre ya existe
     existing_cancha = db.query(Cancha).filter(Cancha.nombre == cancha.nombre).first()
     if existing_cancha:
-        raise HTTPException(status_code=400, detail="El nombre de la cancha ya está en uso.")
+        raise HTTPException(status_code=400, detail=f"El nombre { cancha.nombre } ya está en uso.")
 
     # Crear la nueva cancha
     db_cancha = Cancha(nombre=cancha.nombre, techada=cancha.techada)
